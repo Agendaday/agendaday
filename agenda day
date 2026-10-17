@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DayAgenda — Salão de beleza</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  color-scheme: light;
+  --bg:#fff;--surface:#fff;--surface2:#f2f2f2;--text:#111;
+  --muted:#555;--border:#d4d4d4;--accent:#111;--accent-soft:#ededed;
+  --danger:#8a1c1c;--success:#245c3a;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:#000;--surface:#101010;--surface2:#1b1b1b;--text:#fff;
+  --muted:#c2c2c2;--border:#383838;--accent:#fff;--accent-soft:#292929;
+  --danger:#ff8a8a;--success:#8be0a8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+header{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);z-index:5}
+.topbar{max-width:1100px;margin:auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);font-size:22px;font-weight:bold}
+.brand h1{font-size:20px;margin:0}
+.brand p{font-size:12px;color:var(--muted);margin:4px 0 0}
+.container{max-width:1100px;margin:auto;padding:25px 18px 50px}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-bottom:22px}
+.panel,.hero-copy,.hero-side{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px}
+.hero-copy h2{font-size:clamp(30px,4vw,46px);margin:18px 0 12px}
+.hero-copy p,.hero-side p{color:var(--muted);line-height:1.6}
+.hero-side{display:flex;flex-direction:column;justify-content:center;background:var(--surface2)}
+.hero-icon{font-size:40px}
+.btn{padding:11px 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:bold}
+.btn-primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.btn-danger{color:var(--danger)}
+.btn-small{padding:7px 10px;font-size:12px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:10px 14px;border-radius:10px;font-weight:bold}
+.tab.active{background:var(--accent-soft);color:var(--text);border-color:var(--accent)}
+.panel{margin-bottom:18px}
+.panel h3{margin-top:0}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.panel-head p,.muted,.inline-note{color:var(--muted);font-size:13px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.field.full{grid-column:1/-1}
+label{font-size:12px;color:var(--muted);font-weight:bold}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text)}
+textarea{min-height:85px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft)}
+.form-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:17px}
+.notice{padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:15px}
+.status{display:inline-block;background:var(--surface2);padding:6px 9px;border-radius:20px;font-size:11px}
+.hidden{display:none!important}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.item-card{padding:15px;border:1px solid var(--border);border-radius:12px;background:var(--bg)}
+.item-card h4{margin:0 0 7px}
+.item-card p{font-size:13px;color:var(--muted);line-height:1.5}
+.item-actions{display:flex;flex-wrap:wrap;gap:6px}
+.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:12px;line-height:1.5}
+.section-label{margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border);font-weight:bold;font-size:13px}
+.check-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.check{display:flex;align-items:center;gap:8px;border:1px solid var(--border);padding:10px;border-radius:9px}
+.check input{width:auto}
+.choice-pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:2px}.choice-pill{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer;color:var(--text);background:var(--surface)}.choice-pill:has(input:checked){background:var(--accent-soft);border-color:var(--accent);font-weight:bold}.choice-pill input{width:auto;margin:0;accent-color:var(--accent)}.anamnesis-select-native{display:none!important}
+.admin-lock{max-width:470px;margin:auto}
+footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
+@media(max-width:700px){
+ .hero{grid-template-columns:1fr}
+ .grid.three,.check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:500px){
+ .container{padding:15px 10px}
+ .panel,.hero-copy,.hero-side{padding:17px}
+ .grid,.grid.three,.check-grid,.cards{grid-template-columns:1fr}
+ .panel-head{flex-direction:column}
+}
+
+    .cycle-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px;border:1px solid var(--border,#444);border-radius:10px}
+    .cycle-option{display:flex;align-items:center;gap:7px;font-size:14px;cursor:pointer}
+    .cycle-option input{width:auto;accent-color:var(--pink,#ff3f9f)}
+.cycle-row{display:grid;grid-template-columns:minmax(130px,1fr) minmax(280px,2fr);gap:10px;align-items:end;margin:8px 0;padding:8px;border:1px solid var(--border,#444);border-radius:8px}.cycle-row .field{margin:0}.cycle-options{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 10px}.cycle-option{display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap}.cycle-option input{width:auto}.hint{font-size:12px;opacity:.8}@media(max-width:650px){.cycle-row{grid-template-columns:1fr}.cycle-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.sheet-wrap{width:100%;overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+.sheet-table{width:100%;border-collapse:collapse;min-width:520px;background:var(--surface)}
+.sheet-table th,.sheet-table td{border:1px solid var(--border);padding:7px;text-align:left}
+.sheet-table th{background:var(--surface2);font-size:12px;white-space:nowrap}
+.sheet-table td input{border:0;border-radius:4px;padding:9px;min-width:80px;background:var(--bg)}
+.sheet-table td:last-child{width:52px;text-align:center}
+.sheet-table tfoot th{font-size:14px}
+.sheet-remove{padding:6px 9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:6px}
+.calendar-wrap{border:1px solid var(--border);border-radius:14px;padding:14px;margin:16px 0 20px;background:var(--surface)}
+.calendar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.calendar-month{font-size:18px;font-weight:bold;text-transform:capitalize}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.calendar-weekday{text-align:center;font-size:12px;font-weight:bold;color:var(--muted);padding:7px 0}
+.calendar-day{min-height:64px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);padding:7px;text-align:left;display:flex;flex-direction:column;gap:5px}
+.calendar-day:disabled{opacity:.35;cursor:default}
+.calendar-day.selected{outline:2px solid var(--accent);background:var(--accent-soft)}
+.calendar-day.today{border-color:var(--accent)}
+.calendar-count{font-size:11px;color:var(--success);font-weight:bold}
+.calendar-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
+@media(max-width:500px){.calendar-wrap{padding:8px}.calendar-day{min-height:49px;padding:4px;font-size:12px}.calendar-count{font-size:9px}.calendar-grid{gap:3px}}
+
+</style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">D</div>
+      <div><h1>DayAgenda</h1><p>Seu tempo, seu agendamento.</p></div>
+    </div>
+    <button class="btn" id="themeToggle" type="button">☾ Tema escuro</button>
+  </div>
+</header>
+
+<main class="container">
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="status">BELEZA COM ORGANIZAÇÃO</span>
+      <h2>Seu próximo momento de cuidado começa aqui.</h2>
+      <p>Agende seu horário de forma simples. Escolha um procedimento disponível, informe seus dados e pronto. Não precisa criar conta.</p>
+      <button class="btn btn-primary" id="bookJump" type="button">Agendar horário →</button>
+    </div>
+    <div class="hero-side">
+      <div class="hero-icon">✿</div>
+      <h3>Um espaço para cuidar de você</h3>
+      <p>Os procedimentos e horários são administrados pelo salão.</p>
+    </div>
+  </section>
+
+  <section id="bookingView">
+    <div class="panel" id="bookingPanel">
+      <div class="panel-head">
+        <div><h3>Agendar um horário</h3><p>Preencha seus dados e escolha o procedimento.</p></div>
+        <span class="status">Sem cadastro de cliente</span>
+      </div>
+      <div class="notice" id="bookingNotice">Configure o Supabase no código para ativar os agendamentos.</div>
+      <form id="bookingForm">
+        <div class="grid">
+          <div class="field"><label for="clientName">Nome completo *</label><input id="clientName" required maxlength="90"></div>
+          <div class="field"><label for="clientPhone">Telefone / WhatsApp *</label><input id="clientPhone" required maxlength="25"></div>
+          <div class="field"><label for="bookingService">Procedimento *</label><select id="bookingService" required><option value="">Carregando...</option></select></div>
+          <div class="field"><label for="bookingDate">Data *</label><input id="bookingDate" type="date" required></div>
+          <div class="field"><label for="bookingTime">Horário *</label><select id="bookingTime" required><option value="">Escolha a data primeiro</option></select></div>
+          <div class="field"><label for="bookingEmail">E-mail (opcional)</label><input id="bookingEmail" type="email"></div>
+          <div class="field full"><label for="bookingNotes">Observações (opcional)</label><textarea id="bookingNotes" maxlength="500"></textarea></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Solicitar agendamento</button><button class="btn" type="reset">Limpar</button></div>
+        <p class="inline-note">O horário só estará confirmado quando o salão confirmar o agendamento.</p>
+      </form>
+    </div>
+  </section>
+
+  <section id="adminView" class="hidden">
+    <div class="panel admin-lock" id="loginPanel">
+      <div class="panel-head"><div><h3>Acesso do administrador</h3><p>Entre com a conta autorizada do salão.</p></div><span class="status">Privado</span></div>
+      <div class="notice">Não há cadastro público de administrador. A conta precisa existir no Supabase.</div>
+      <form id="loginForm">
+        <div class="grid">
+          <div class="field full"><label for="adminEmail">E-mail do ADM</label><input id="adminEmail" type="email" required autocomplete="username"></div>
+          <div class="field full"><label for="adminPassword">Senha</label><input id="adminPassword" type="password" required autocomplete="current-password"></div>
+        </div>
+        <div class="form-actions"><button class="btn btn-primary" type="submit">Entrar no painel</button></div>
+        <p id="loginMessage" class="inline-note"></p>
+      </form>
+    </div>
+
+    <div id="adminDashboard" class="hidden">
+      <div class="panel">
+        <div class="panel-head"><div><h3>Painel do salão</h3><p>Gerencie procedimentos, agendamentos e fichas.</p></div><button class="btn" id="logoutBtn" type="button">Sair</button></div>
+        <div class="tabs">
+          <button class="tab active" data-admin-tab="services" type="button">Procedimentos</button>
+          <button class="tab" data-admin-tab="appointments" type="button">Agendamentos</button>
+          <button class="tab" data-admin-tab="anamnesis" type="button">Ficha de anamnese</button>
+          <button class="tab" data-admin-tab="saved" type="button">Fichas salvas</button>
+        </div>
+
+        <div id="savedAdmin" class="hidden">
+          <div class="panel-head">
+            <div><h3>Fichas salvas</h3><p>Encontre uma cliente e abra a ficha sem rolar até o final do formulário.</p></div>
+            <button class="btn" id="refreshSavedAnamneses" type="button">Atualizar lista</button>
+          </div>
+          <div class="field" style="margin-bottom:14px"><label for="savedAnamnesisSearch">Buscar por nome ou contato</label><input id="savedAnamnesisSearch" type="search" placeholder="Digite o nome ou telefone da cliente"></div>
+          <div id="savedAnamnesisList"><div class="empty">Entre como administrador para carregar as fichas.</div></div>
+        </div>
+
+        <div id="servicesAdmin">
+          <div class="grid">
+            <div>
+              <h3 id="serviceFormTitle">Criar procedimento</h3>
+              <p class="muted">Cadastre manualmente cada procedimento do salão.</p>
+              <form id="serviceForm">
+                <input type="hidden" id="serviceId">
+                <div class="grid">
+                  <div class="field full"><label for="serviceName">Nome do procedimento *</label><input id="serviceName" required maxlength="100"></div>
+                  <div class="field"><label for="servicePrice">Preço (R$) *</label><input id="servicePrice" type="number" min="0" step="0.01" required></div>
+                  <div class="field"><label for="serviceDuration">Duração (minutos) *</label><input id="serviceDuration" type="number" min="5" step="5" required></div>
+                  <div class="field full"><label for="serviceDescription">Descrição</label><textarea id="serviceDescription" maxlength="300"></textarea></div>
+                  <div class="field full"><label class="check"><input id="serviceActive" type="checkbox" checked> Procedimento ativo</label></div>
+                </div>
+                <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar procedimento</button><button class="btn" id="cancelServiceEdit" type="button">Limpar</button></div>
+                <p id="serviceMessage" class="inline-note"></p>
+              </form>
+            </div>
+            <div><h3>Procedimentos cadastrados</h3><div id="servicesList" class="cards"><div class="empty">Nenhum procedimento carregado.</div></div></div>
+          </div>
+        </div>
+
+        <div id="appointmentsAdmin" class="hidden">
+          <div class="panel-head"><div><h3>Agendamentos</h3><p>Consulte os horários pelo calendário ou pela lista. Toque em um dia para ver os agendamentos daquela data.</p></div><button class="btn" id="refreshAppointments" type="button">Atualizar</button></div>
+          <div class="calendar-wrap">
+            <div class="calendar-head"><button class="btn btn-small" id="calendarPrev" type="button" aria-label="Mês anterior">‹ Anterior</button><div class="calendar-month" id="calendarMonth">Calendário</div><button class="btn btn-small" id="calendarNext" type="button" aria-label="Próximo mês">Próximo ›</button></div>
+            <div class="calendar-grid" id="appointmentsCalendar"></div>
+            <div class="calendar-footer"><span id="calendarSummary">Carregando calendário…</span><button class="btn btn-small" id="calendarShowAll" type="button">Ver todos os agendamentos</button></div>
+          </div>
+          <div id="appointmentsList"><div class="empty">Nenhum agendamento carregado.</div></div>
+        </div>
+
+        <div id="anamnesisAdmin" class="hidden">
+          <h3>Ficha de anamnese capilar</h3>
+          <div class="notice">As informações de saúde são sensíveis. Use somente com autorização da cliente e mantenha o acesso restrito à profissional responsável.</div>
+          <form id="anamnesisForm">
+            <input type="hidden" id="anamnesisId">
+            <div class="section-label">Dados pessoais</div>
+            <div class="grid three">
+              <div class="field"><label for="aName">Nome completo *</label><input id="aName" required maxlength="120"></div>
+              <div class="field"><label for="aContact">Contato / WhatsApp</label><input id="aContact" maxlength="30"></div>
+              <div class="field"><label for="aBirth">Nascimento</label><input id="aBirth" type="date"></div>
+              <div class="field"><label for="aAttendant">Atendente</label><input id="aAttendant" maxlength="100"></div>
+              <div class="field"><label for="aEmail">E-mail</label><input id="aEmail" type="email" maxlength="150"></div>
+              <div class="field"><label for="aProfession">Profissão</label><input id="aProfession" maxlength="100"></div>
+            </div>
+            <div class="grid" style="margin-top:14px">
+              <div class="field"><label for="aComplaint">Queixa principal</label><textarea id="aComplaint"></textarea></div>
+              <div class="field"><label for="aGoal">Objetivo final</label><textarea id="aGoal"></textarea></div>
+            </div>
+            <div class="section-label">Dados Clínicos</div>
+            <div class="grid three">
+              <div class="field"><label for="aPressure">Pressão arterial</label><select id="aPressure"><option value="">Selecione</option><option>Alta</option><option>Baixa</option><option>Não sabe</option><option>Normal</option></select></div>
+              <div class="field"><label for="aSurgery">Cirurgias (entre 1 ano e meio)</label><select id="aSurgery"><option value="">Selecione</option><option>Sim</option><option>Não</option></select></div>
+              <div class="field"><label for="aPregnancy">Gestante / parto recente / lactante / menopausa</label><select id="aPregnancy"><option value="">Selecione</option><option>Gestante</option><option>Parto recente</option><option>Lactante</option><option>Menopausa</option><option>Não</option></select></div>
+              <div class="field"><label for="aStress">Estresse, depressão, ansiedade</label><select id="aStress"><option value="">Selecione</option><option>Nega</option><option>Sim</option></select></div>
+              <div class="field"><label for="aMedication">Medicação</label><select id="aMedication"><option value="">Selecione</option><option>Não</option><option>Sim</option></select></div>
+              <div class="field"><label for="aDiet">Dieta alimentar</label><input id="aDiet" placeholder="Informar dieta"></div>
+            </div>
+            <div class="check-grid" style="margin-top:14px">
+              <label class="check"><input type="checkbox" id="aThyroid"> Doença da tireoide</label>
+              <label class="check"><input type="checkbox" id="aDiabetes"> Diabetes</label>
+              <label class="check"><input type="checkbox" id="aGenetic"> Histórico genético</label>
+              <label class="check"><input type="checkbox" id="aAllergy"> Alergias</label>
+              <label class="check"><input type="checkbox" id="aAnimals"> Contato com animais</label>
+              <label class="check"><input type="checkbox" id="aRadiation"> Exposição à radiação</label>
+            </div>
+            <div class="grid" style="margin-top:14px">
+              <div class="field"><label for="aAllergyDetails">Alergias / outros detalhes</label><textarea id="aAllergyDetails"></textarea></div>
+              <div class="field"><label for="aClinicalNotes">Outros / produtos cosméticos que usa</label><textarea id="aClinicalNotes"></textarea></div>
+            </div>
+            <div class="section-label">Observação tátil / visual</div>
+            <div class="grid three">
+              <div class="field"><label for="aScalp">Couro cabeludo</label><select id="aScalp"><option value="">Não avaliado</option><option>Normal</option><option>Seco</option><option>Oleoso</option><option>Sensível / irritado</option><option>Descamação</option></select></div>
+              <div class="field"><label for="aBulb">Força do bulbo / quebra</label><select id="aBulb"><option value="">Não avaliado</option><option>Normal</option><option>Queda por completo</option><option>Quebra na base</option></select></div>
+              <div class="field"><label for="aTipology">Tipologia</label><select id="aTipology"><option value="">Selecione</option><option>Lisótrico 1A, 1B, 1C</option><option>Sinótrico 2A, 2B, 2C, 3A, 3B, 3C</option><option>Ulótrico 4A, 4B, 4C</option></select></div>
+              <div class="field"><label for="aLength">Comprimento</label><select id="aLength"><option value="">Não avaliado</option><option>Curto</option><option>Médio</option><option>Longo</option><option>Extra longo</option></select></div>
+              <div class="field"><label for="aDensity">Densidade</label><select id="aDensity"><option value="">Não avaliado</option><option>Baixa</option><option>Média</option><option>Alta</option></select></div>
+              <div class="field"><label for="aThickness">Espessura</label><select id="aThickness"><option value="">Não avaliado</option><option>Fino</option><option>Médio</option><option>Grosso</option></select></div>
+              <div class="field"><label for="aEnds">Pontas</label><select id="aEnds"><option value="">Não avaliado</option><option>Íntegras</option><option>Quebradiças</option></select></div>
+              <div class="field"><label for="aPorosity">Porosidade</label><select id="aPorosity"><option value="">Não avaliado</option><option>Sem porosidade</option><option>Pouco poroso</option><option>Muito poroso</option></select></div>
+              <div class="field"><label for="aElasticity">Elasticidade</label><select id="aElasticity"><option value="">Não avaliado</option><option>Normal</option><option>Baixa</option><option>Alta</option><option>Sem elasticidade</option></select></div>
+            </div>
+            <div class="section-label">Histórico capilar</div>
+            <div class="grid">
+              <div class="field"><label for="aChemistry">Químicas / procedimentos anteriores</label><textarea id="aChemistry"></textarea></div>
+              <div class="field"><label for="aProducts">Produtos que costuma usar</label><textarea id="aProducts"></textarea></div>
+              <div class="field full"><label for="aNotes">Observações gerais / teste de mecha</label><textarea id="aNotes"></textarea></div>
+            </div>
+            <div class="section-label">Outras informações</div>
+            <div class="grid">
+              <div class="field"><label for="aWashFrequency">Frequência de lavagem</label><select id="aWashFrequency"><option value="">Não informado</option><option>1x na semana</option><option>2x na semana</option><option>3x na semana</option><option>Outras</option></select></div>
+              <div class="field"><label for="aWaterTemperature">Temperatura da água</label><select id="aWaterTemperature"><option value="">Não informado</option><option>Fria</option><option>Ambiente</option><option>Quente/morna</option></select></div>
+              <div class="field"><label for="aHairHabit">Hábito com o cabelo</label><select id="aHairHabit"><option value="">Não informado</option><option>Amarrar contorcendo</option><option>Prender com presilhas</option><option>Boné</option><option>Capacete</option><option>Touca</option><option>Outros</option></select></div>
+              <div class="field"><label for="aLastChemical">Último processo químico realizado</label><input id="aLastChemical"></div>
+            </div>
+            <div class="section-label">Alopecia</div>
+            <div class="grid">
+              <div class="field"><label for="aAlopeciaLocation">Localização</label><input id="aAlopeciaLocation"></div>
+              <div class="field"><label for="aAlopeciaDegree">Grau</label><input id="aAlopeciaDegree"></div>
+              <div class="field"><label for="aHairLossDuration">Tempo de queda</label><input id="aHairLossDuration"></div>
+              <div class="field"><label for="aAlopeciaFamily">Antecedentes familiares</label><input id="aAlopeciaFamily"></div>
+            </div>
+            <div class="section-label">Tratamento e indicação de cronograma capilar</div>
+            <div class="field full"><label><strong>CICLO 1</strong></label></div>
+            <div class="cycle-row"><div class="field"><label for="aCycleStart">Hoje</label><input id="aCycleStart" type="date"></div><div class="cycle-options"><label class="cycle-option"><input type="checkbox" id="aCycleTreatment1_1" value="Restauração"> Restauração</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment1_2" value="Reconstrução"> Reconstrução</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment1_3" value="Hidratação"> Hidratação</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment1_4" value="Umectação"> Umectação</label></div></div>
+            <div class="cycle-row"><div class="field"><label for="aCycle2">Data</label><input id="aCycle2" type="date"></div><div class="cycle-options"><label class="cycle-option"><input type="checkbox" id="aCycleTreatment2_1" value="Restauração"> Restauração</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment2_2" value="Reconstrução"> Reconstrução</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment2_3" value="Hidratação"> Hidratação</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment2_4" value="Umectação"> Umectação</label></div></div>
+            <div class="cycle-row"><div class="field"><label for="aCycle3">Data</label><input id="aCycle3" type="date"></div><div class="cycle-options"><label class="cycle-option"><input type="checkbox" id="aCycleTreatment3_1" value="Restauração"> Restauração</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment3_2" value="Reconstrução"> Reconstrução</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment3_3" value="Hidratação"> Hidratação</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment3_4" value="Umectação"> Umectação</label></div></div>
+            <div class="cycle-row"><div class="field"><label for="aCycle4">Data</label><input id="aCycle4" type="date"></div><div class="cycle-options"><label class="cycle-option"><input type="checkbox" id="aCycleTreatment4_1" value="Restauração"> Restauração</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment4_2" value="Reconstrução"> Reconstrução</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment4_3" value="Hidratação"> Hidratação</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment4_4" value="Umectação"> Umectação</label></div></div>
+            <div class="cycle-row"><div class="field"><label for="aCycle5">Data</label><input id="aCycle5" type="date"></div><div class="cycle-options"><label class="cycle-option"><input type="checkbox" id="aCycleTreatment5_1" value="Restauração"> Restauração</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment5_2" value="Reconstrução"> Reconstrução</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment5_3" value="Hidratação"> Hidratação</label><label class="cycle-option"><input type="checkbox" id="aCycleTreatment5_4" value="Umectação"> Umectação</label></div></div>
+            <p class="hint">Selecione uma ou mais opções para cada data.</p>
+            <div class="section-label">Procedimentos realizados / agendados</div>
+            <p class="hint">Preencha como uma planilha: procedimento, data e valor. Use “Adicionar linha” para incluir mais procedimentos.</p>
+            <div class="sheet-wrap">
+              <table class="sheet-table" id="procedureSheet"><thead><tr><th>Procedimento</th><th>Data</th><th>Valor (R$)</th><th></th></tr></thead><tbody></tbody></table>
+            </div>
+            <div class="form-actions"><button class="btn btn-small" type="button" id="addProcedureRow">+ Adicionar linha</button></div>
+            <div class="section-label">Orçamento</div>
+            <p class="hint">Adicione cada serviço ou produto e o valor. O total é calculado automaticamente.</p>
+            <div class="sheet-wrap">
+              <table class="sheet-table" id="budgetSheet"><thead><tr><th>Descrição / procedimento</th><th>Valor (R$)</th><th></th></tr></thead><tbody></tbody><tfoot><tr><th>Total</th><th id="budgetTotal">R$ 0,00</th><th></th></tr></tfoot></table>
+            </div>
+            <div class="form-actions"><button class="btn btn-small" type="button" id="addBudgetRow">+ Adicionar item</button></div>
+            <textarea id="aPrescription" class="hidden" aria-hidden="true"></textarea>
+            <textarea id="aBudget" class="hidden" aria-hidden="true"></textarea>
+            <div class="grid">
+              <div class="field full"><label for="aHomeCare">Indicações de home care e outros profissionais (dermatologista)</label><textarea id="aHomeCare"></textarea></div>
+            </div>
+            <div class="section-label">Termo de responsabilidade</div>
+            <div class="grid">
+              <div class="field"><label for="aImageConsent">Consentimento para fotos e vídeos</label><select id="aImageConsent"><option value="">Não informado</option><option>Sim, autorizo</option><option>Não autorizo</option></select></div>
+              <div class="field"><label for="aConsentDate">Data do consentimento</label><input id="aConsentDate" type="date"></div>
+              <div class="field full"><label for="aResponsibility">Termo de responsabilidade e consentimento</label><textarea id="aResponsibility" rows="8">Declaro que todas as informações obtidas nesse procedimento são verdadeiras, não cabendo ao profissional por fatos omitidos ou falsos. Estou ciente que preciso manter dentro do agendamento os dias corretos para os procedimentos venham ter resultados eficazes conferido pela profissional. Por meio desse termo de consentimento livre e esclarecido, consinto que a terapeuta capilar acima descrita tire fotografias, faça vídeo e outros tipos de imagens de mim, sobre meu quadro clínico. Consinto que essas imagens sejam utilizadas para didática e científicas, divulgadas em aulas, palestras, conferências e congresso e em qualquer meio de mídia social podendo aparecer meu rosto. Fui esclarecido que não receberei recenseamento ou pagamento mediante o uso de minhas imagens.</textarea></div>
+              <div class="field full"><label for="aResponsibilityName">Eu (nome completo)</label><input id="aResponsibilityName" placeholder="Nome completo do cliente"></div>
+              <div class="field"><label for="aResponsibilityRG">RG</label><input id="aResponsibilityRG" placeholder="RG do cliente"></div>
+              <div class="field"><label for="aResponsibilityCPF">CPF</label><input id="aResponsibilityCPF" placeholder="CPF do cliente"></div>
+              <div class="field"><label for="aResponsibilityCity">Cidade</label><input id="aResponsibilityCity" value="Porto Velho - RO"></div>
+              <div class="field"><label for="aResponsibilityDate">Data</label><input id="aResponsibilityDate" type="date"></div>
+              <div class="field full"><label for="aProfessionalSignature">Assinatura da profissional</label><input id="aProfessionalSignature" placeholder="Nome / assinatura da profissional"></div>
+            </div>
+            <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar ficha</button><button class="btn" id="clearAnamnesis" type="button">Limpar ficha</button></div>
+            <p id="anamnesisMessage" class="inline-note"></p>
+          </form>
+          <div class="section-label">Fichas salvas</div>
+          <div id="anamnesisList"><div class="empty">Nenhuma ficha carregada.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>DayAgenda · Seu tempo, seu agendamento.</footer>
+
+<script>
+/* COLOQUE AQUI A URL E A CHAVE PÚBLICA DO SUPABASE */
+const SUPABASE_URL = "https://tfvnuqchjpjglidmhxpr.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_IG3rrWpeoOcBYnyMCFCO4Q_5UwdvMBj";
+
+const supabaseReady = SUPABASE_URL.startsWith("https://") &&
+  !SUPABASE_URL.includes("COLE_AQUI") &&
+  !SUPABASE_ANON_KEY.includes("COLE_AQUI");
+const db = supabaseReady ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  // Mantém a sessão entre visitas e renova o access token automaticamente.
+  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, flowType: "pkce" },
+  global: { headers: { "X-Client-Info": "dayagenda-web" } }
+}) : null;
+const $ = id => document.getElementById(id);
+const state = {services:[],appointments:[],anamneses:[],session:null,adminTab:"services"};
+const timeSlots=[];
+for(let h=8;h<=19;h++)for(const m of [0,30])if(!(h===19&&m===30))timeSlots.push(`${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`);
+
+/* TEMA CLARO/ESCURO */
+function applyTheme(theme){
+  document.documentElement.dataset.theme=theme;
+  $("themeToggle").textContent=theme==="dark"?"☀ Tema claro":"☾ Tema escuro";
+  try{localStorage.setItem("dayagenda-theme",theme)}catch(e){}
+}
+let theme="light";
+try{theme=localStorage.getItem("dayagenda-theme")||"light"}catch(e){}
+applyTheme(theme);
+$("themeToggle").addEventListener("click",()=>{
+  applyTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
+});
+
+/* NAVEGAÇÃO DO ADM */
+function showTab(tab){
+  $("bookingView").classList.toggle("hidden",tab!=="booking");
+  $("adminView").classList.toggle("hidden",tab!=="admin");
+  if(tab==="admin")updateAdminVisibility();
+}
+function routeFromHash(){
+  showTab(location.hash==="#admin"?"admin":"booking");
+}
+window.addEventListener("hashchange",routeFromHash);
+$("bookJump").addEventListener("click",()=>{
+  showTab("booking");$("bookingPanel").scrollIntoView({behavior:"smooth"});
+});
+function showAdminTab(tab){
+  state.adminTab=tab;
+  $("servicesAdmin").classList.toggle("hidden",tab!=="services");
+  $("appointmentsAdmin").classList.toggle("hidden",tab!=="appointments");
+  $("anamnesisAdmin").classList.toggle("hidden",tab!=="anamnesis");
+  $("savedAdmin").classList.toggle("hidden",tab!=="saved");
+  document.querySelectorAll("[data-admin-tab]").forEach(b=>b.classList.toggle("active",b.dataset.adminTab===tab));
+  if(state.session&&tab==="appointments")loadAppointments();
+  if(state.session&&(tab==="anamnesis"||tab==="saved"))loadAnamneses();
+}
+document.querySelectorAll("[data-admin-tab]").forEach(b=>b.addEventListener("click",()=>showAdminTab(b.dataset.adminTab)));
+function updateAdminVisibility(){
+  $("loginPanel").classList.toggle("hidden",!!state.session);
+  $("adminDashboard").classList.toggle("hidden",!state.session);
+}
+function escapeHTML(v){
+  return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function money(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function setMessage(id,msg,err=false){
+  $(id).textContent=msg;$(id).style.color=err?"var(--danger)":"var(--success)";
+}
+function localDateISO(d=new Date()){
+  return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+$("bookingDate").min=localDateISO();
+$("bookingDate").addEventListener("change",refreshTimeOptions);
+$("bookingService").addEventListener("change",refreshTimeOptions);
+
+function refreshTimeOptions(){
+  const sel=$("bookingTime"),date=$("bookingDate").value;
+  sel.innerHTML='<option value="">Selecione um horário</option>';
+  if(!date)return;
+  const booked=state.appointments.filter(a=>a.appointment_date===date&&a.status!=="cancelado").map(a=>(a.appointment_time||"").slice(0,5));
+  timeSlots.filter(t=>!booked.includes(t)).forEach(t=>{
+    const o=document.createElement("option");o.value=t;o.textContent=t;sel.appendChild(o);
+  });
+  if(sel.options.length===1)sel.innerHTML='<option value="">Sem horários disponíveis</option>';
+}
+function renderPublicServices(){
+  const sel=$("bookingService");
+  sel.innerHTML='<option value="">Selecione um procedimento</option>';
+  state.services.filter(s=>s.active).forEach(s=>{
+    const o=document.createElement("option");o.value=s.id;o.textContent=`${s.name} · ${money(s.price)} · ${s.duration_minutes} min`;sel.appendChild(o);
+  });
+  if(!state.services.some(s=>s.active))sel.innerHTML='<option value="">Nenhum procedimento disponível</option>';
+  refreshTimeOptions();
+}
+async function loadServices(){
+  if(!db)return;
+  const {data,error}=await db.from("da_services").select("*").order("name");
+  if(error){$("bookingNotice").textContent="Erro ao carregar procedimentos: "+error.message;return}
+  state.services=data||[];renderPublicServices();renderServicesAdmin();
+}
+function renderServicesAdmin(){
+  const host=$("servicesList");
+  if(!state.services.length){host.innerHTML='<div class="empty">Nenhum procedimento cadastrado. Crie o primeiro ao lado.</div>';return}
+  host.innerHTML=state.services.map(s=>`
+    <article class="item-card">
+      <h4>${escapeHTML(s.name)} <span class="status">${s.active?"Ativo":"Inativo"}</span></h4>
+      <p>${money(s.price)} · ${Number(s.duration_minutes)} minutos<br>${escapeHTML(s.description||"")}</p>
+      <div class="item-actions">
+        <button class="btn btn-small" data-edit-service="${s.id}">Editar</button>
+        <button class="btn btn-small" data-toggle-service="${s.id}">${s.active?"Desativar":"Ativar"}</button>
+        <button class="btn btn-danger btn-small" data-delete-service="${s.id}">Excluir</button>
+      </div>
+    </article>`).join("");
+  host.querySelectorAll("[data-edit-service]").forEach(b=>b.addEventListener("click",()=>editService(b.dataset.editService)));
+  host.querySelectorAll("[data-toggle-service]").forEach(b=>b.addEventListener("click",()=>toggleService(b.dataset.toggleService)));
+  host.querySelectorAll("[data-delete-service]").forEach(b=>b.addEventListener("click",()=>deleteService(b.dataset.deleteService)));
+}
+$("serviceForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!db||!state.session)return setMessage("serviceMessage","Entre no painel conectado ao Supabase.",true);
+  const id=$("serviceId").value;
+  const row={name:$("serviceName").value.trim(),price:Number($("servicePrice").value),duration_minutes:Number($("serviceDuration").value),description:$("serviceDescription").value.trim()||null,active:$("serviceActive").checked};
+  if(!row.name||row.price<0||row.duration_minutes<5)return setMessage("serviceMessage","Confira nome, preço e duração.",true);
+  const result=id?await db.from("da_services").update(row).eq("id",id):await db.from("da_services").insert(row);
+  if(result.error)return setMessage("serviceMessage","Erro ao salvar: "+result.error.message,true);
+  resetServiceForm();await loadServices();setMessage("serviceMessage","Procedimento salvo!");
+});
+function editService(id){
+  const s=state.services.find(x=>String(x.id)===String(id));if(!s)return;
+  $("serviceId").value=s.id;$("serviceName").value=s.name;$("servicePrice").value=s.price;
+  $("serviceDuration").value=s.duration_minutes;$("serviceDescription").value=s.description||"";
+  $("serviceActive").checked=!!s.active;$("serviceFormTitle").textContent="Editar procedimento";
+}
+function resetServiceForm(){
+  $("serviceForm").reset();$("serviceId").value="";$("serviceActive").checked=true;$("serviceFormTitle").textContent="Criar procedimento";
+}
+$("cancelServiceEdit").addEventListener("click",resetServiceForm);
+async function toggleService(id){
+  const s=state.services.find(x=>String(x.id)===String(id));if(!s)return;
+  const {error}=await db.from("da_services").update({active:!s.active}).eq("id",id);
+  if(error)return alert("Erro ao atualizar: "+error.message);await loadServices();
+}
+async function deleteService(id){
+  const s=state.services.find(x=>String(x.id)===String(id));if(!s)return;
+  if(!confirm(`Excluir "${s.name}"?`))return;
+  const {error}=await db.from("da_services").delete().eq("id",id);
+  if(error)return alert("Não foi possível excluir: "+error.message);
+  await loadServices();
+}
+
+/* AGENDAMENTO PÚBLICO */
+$("bookingForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!db)return alert("Configure primeiro a URL e a chave pública do Supabase.");
+  const service=state.services.find(s=>String(s.id)===$("bookingService").value&&s.active);
+  if(!service)return alert("Escolha um procedimento disponível.");
+  const row={
+    client_name:$("clientName").value.trim(),
+    client_phone:$("clientPhone").value.trim(),
+    client_email:$("bookingEmail").value.trim()||null,
+    service_id:service.id,service_name:service.name,price:service.price,
+    appointment_date:$("bookingDate").value,appointment_time:$("bookingTime").value,
+    notes:$("bookingNotes").value.trim()||null,status:"pendente"
+  };
+  const {error}=await db.from("da_appointments").insert(row);
+  if(error)return alert("Erro ao solicitar agendamento: "+error.message);
+  alert("Solicitação enviada! Aguarde a confirmação do salão.");
+  $("bookingForm").reset();$("bookingDate").min=localDateISO();refreshTimeOptions();
+});
+
+/* LOGIN DO ADM: O SUPABASE MANTÉM A SESSÃO NO MESMO NAVEGADOR */
+$("loginForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!db)return setMessage("loginMessage","Configure primeiro a URL e a chave pública do Supabase.",true);
+  const {data,error}=await db.auth.signInWithPassword({
+    email:$("adminEmail").value.trim(),password:$("adminPassword").value
+  });
+  if(error)return setMessage("loginMessage","Não foi possível entrar: "+error.message,true);
+  state.session=data.session;updateAdminVisibility();await loadServices();
+});
+$("logoutBtn").addEventListener("click",async()=>{
+  if(db)await db.auth.signOut();
+  state.session=null;updateAdminVisibility();location.hash="";
+  showTab("booking");
+});
+
+/* AGENDAMENTOS DO PAINEL + CALENDÁRIO */
+let calendarCursor = new Date(); calendarCursor = new Date(calendarCursor.getFullYear(),calendarCursor.getMonth(),1);
+let selectedAppointmentDate = "";
+const monthFormatter = new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric"});
+function localDateKey(year,month,day){return `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`}
+function renderAppointmentsCalendar(){
+  const grid=$("appointmentsCalendar"); if(!grid)return;
+  const y=calendarCursor.getFullYear(),m=calendarCursor.getMonth();
+  $("calendarMonth").textContent=monthFormatter.format(calendarCursor);
+  const names=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  let html=names.map(n=>`<div class="calendar-weekday">${n}</div>`).join("");
+  const offset=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<offset;i++)html+='<div></div>';
+  const today=new Date(); const todayKey=localDateKey(today.getFullYear(),today.getMonth(),today.getDate());
+  for(let day=1;day<=days;day++){
+    const key=localDateKey(y,m,day);
+    const count=state.appointments.filter(a=>a.appointment_date===key&&a.status!=="cancelado").length;
+    const classes=["calendar-day",key===selectedAppointmentDate?"selected":"",key===todayKey?"today":""].filter(Boolean).join(" ");
+    html+=`<button type="button" class="${classes}" data-calendar-date="${key}"><span>${day}</span>${count?`<span class="calendar-count">${count} horário${count===1?"":"s"}</span>`:""}</button>`;
+  }
+  grid.innerHTML=html;
+  grid.querySelectorAll("[data-calendar-date]").forEach(btn=>btn.addEventListener("click",()=>{selectedAppointmentDate=btn.dataset.calendarDate;renderAppointmentsCalendar();renderAppointmentsList()}));
+  const total=state.appointments.filter(a=>a.appointment_date===selectedAppointmentDate&&a.status!=="cancelado").length;
+  $("calendarSummary").textContent=selectedAppointmentDate?`${selectedAppointmentDate.split("-").reverse().join("/")} · ${total} agendamento${total===1?"":"s"} (sem cancelados)`:"Selecione um dia para filtrar a lista. Os números verdes indicam horários agendados.";
+}
+function renderAppointmentsList(){
+  const all=state.appointments||[];
+  const data=selectedAppointmentDate?all.filter(a=>a.appointment_date===selectedAppointmentDate):all;
+  if(!data.length){$("appointmentsList").innerHTML=`<div class="empty">${selectedAppointmentDate?"Nenhum agendamento nesta data.":"Nenhum agendamento encontrado."}</div>`;return}
+  $("appointmentsList").innerHTML=`<div class="muted" style="margin:8px 0 12px">${selectedAppointmentDate?`Agendamentos de ${selectedAppointmentDate.split("-").reverse().join("/")}`:"Todos os agendamentos"}</div><div style="overflow:auto"><table style="width:100%;border-collapse:collapse;min-width:650px"><thead><tr>${["Cliente","Procedimento","Data e hora","Status"].map(x=>`<th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">${x}</th>`).join("")}</tr></thead><tbody>${data.map(a=>`
+    <tr>
+      <td style="padding:10px;border-bottom:1px solid var(--border)">${escapeHTML(a.client_name)}<br>${escapeHTML(a.client_phone)}</td>
+      <td style="padding:10px;border-bottom:1px solid var(--border)">${escapeHTML(a.service_name||"")}<br>${money(a.price)}</td>
+      <td style="padding:10px;border-bottom:1px solid var(--border)">${escapeHTML((a.appointment_date||"").split("-").reverse().join("/"))} · ${escapeHTML((a.appointment_time||"").slice(0,5))}</td>
+      <td style="padding:10px;border-bottom:1px solid var(--border)"><select data-status-id="${escapeHTML(a.id)}"><option value="pendente" ${a.status==="pendente"?"selected":""}>Pendente</option><option value="confirmado" ${a.status==="confirmado"?"selected":""}>Confirmado</option><option value="concluido" ${a.status==="concluido"?"selected":""}>Concluído</option><option value="cancelado" ${a.status==="cancelado"?"selected":""}>Cancelado</option></select></td>
+    </tr>`).join("")}</tbody></table></div>`;
+  document.querySelectorAll("[data-status-id]").forEach(sel=>sel.addEventListener("change",async()=>{
+    const {error}=await db.from("da_appointments").update({status:sel.value}).eq("id",sel.dataset.statusId);
+    if(error)alert("Erro ao atualizar: "+error.message);else loadAppointments();
+  }));
+}
+async function loadAppointments(){
+  if(!db||!state.session)return;
+  const {data,error}=await db.from("da_appointments").select("*").order("appointment_date").order("appointment_time");
+  if(error){$("appointmentsList").innerHTML=`<div class="empty">Erro: ${escapeHTML(error.message)}</div>`;return}
+  state.appointments=data||[];refreshTimeOptions();renderAppointmentsCalendar();renderAppointmentsList();
+}
+$("calendarPrev").addEventListener("click",()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()-1,1);renderAppointmentsCalendar()});
+$("calendarNext").addEventListener("click",()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()+1,1);renderAppointmentsCalendar()});
+$("calendarShowAll").addEventListener("click",()=>{selectedAppointmentDate="";renderAppointmentsCalendar();renderAppointmentsList()});
+$("refreshAppointments").addEventListener("click",loadAppointments);
+
+/* FICHA DE ANAMNESE */
+const anamnesisFields=[
+ ["name","aName"],["contact","aContact"],["birth_date","aBirth"],["attendant","aAttendant"],["email","aEmail"],["profession","aProfession"],
+ ["complaint","aComplaint"],["goal","aGoal"],["pressure","aPressure"],["surgery","aSurgery"],["pregnancy","aPregnancy"],["stress","aStress"],["medication","aMedication"],["diet","aDiet"],
+ ["thyroid","aThyroid"],["diabetes","aDiabetes"],["genetic_history","aGenetic"],["allergies","aAllergy"],["allergy_details","aAllergyDetails"],["animals_contact","aAnimals"],["radiation_exposure","aRadiation"],["clinical_notes","aClinicalNotes"],
+ ["scalp_condition","aScalp"],["bulb_strength","aBulb"],["hair_typology","aTipology"],["hair_length","aLength"],["hair_density","aDensity"],["hair_thickness","aThickness"],["hair_ends","aEnds"],["hair_porosity","aPorosity"],["hair_elasticity","aElasticity"],["chemical_history","aChemistry"],["products_used","aProducts"],["notes","aNotes"],
+ ["wash_frequency","aWashFrequency"],["water_temperature","aWaterTemperature"],["hair_habit","aHairHabit"],["last_chemical_process","aLastChemical"],["alopecia_location","aAlopeciaLocation"],["alopecia_degree","aAlopeciaDegree"],["hair_loss_duration","aHairLossDuration"],["alopecia_family_history","aAlopeciaFamily"],["cycle_start_date","aCycleStart"],["cycle_date_2","aCycle2"],["cycle_date_3","aCycle3"],["cycle_date_4","aCycle4"],["cycle_date_5","aCycle5"],["prescription","aPrescription"],["budget_details","aBudget"],["home_care_recommendations","aHomeCare"],["image_consent","aImageConsent"],["consent_date","aConsentDate"],["responsibility_notes","aResponsibility"]
+];
+// Opções clicáveis no estilo da ficha antiga: os selects continuam sendo usados internamente para salvar no Supabase.
+function enhanceAnamnesisSelects(){
+  document.querySelectorAll('#anamnesisForm select').forEach((select,index)=>{
+    if(select.dataset.pillsReady) return;
+    select.dataset.pillsReady='1';
+    const wrap=document.createElement('div'); wrap.className='choice-pills'; wrap.dataset.forSelect=select.id;
+    [...select.options].forEach((option,i)=>{
+      if(i===0 && !option.value) return;
+      const label=document.createElement('label'); label.className='choice-pill';
+      const control=document.createElement('input');
+      // Hábito com o cabelo permite marcar várias opções, como na ficha antiga.
+      control.type=select.id==='aHairHabit'?'checkbox':'radio';
+      control.name=control.type==='radio'?'choice_'+(select.id||index):'choice_'+select.id+'_'+i;
+      control.value=option.value || option.textContent;
+      control.addEventListener('change',()=>{
+        if(select.id==='aHairHabit'){
+          const chosen=[...wrap.querySelectorAll('input[type=checkbox]:checked')].map(el=>el.value);
+          select.dataset.multipleValue=chosen.join(' | ');
+          select.value=chosen[0]||'';
+        } else select.value=option.value;
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+      label.append(control,document.createTextNode(' '+option.textContent)); wrap.append(label);
+    });
+    select.classList.add('anamnesis-select-native'); select.insertAdjacentElement('afterend',wrap);
+  });
+  syncAnamnesisChoices();
+}
+function syncAnamnesisChoices(){
+  document.querySelectorAll('#anamnesisForm select').forEach(select=>{
+    const wrap=document.querySelector('.choice-pills[data-for-select="'+select.id+'"]'); if(!wrap)return;
+    if(select.id==='aHairHabit'){
+      const chosen=(select.dataset.multipleValue||select.value||'').split(' | ').filter(Boolean);
+      wrap.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=chosen.includes(c.value));
+    } else wrap.querySelectorAll('input[type=radio]').forEach(r=>r.checked=(r.value===select.value && !!select.value));
+  });
+}
+// Tabelas editáveis no estilo Excel. Os dados são guardados nas colunas existentes do Supabase.
+function sheetAddRow(tableId, values={}, kind){
+  const tbody=$(tableId).querySelector('tbody'); const tr=document.createElement('tr');
+  const cols=kind==='procedure'?[['procedure','text','Nome do procedimento'],['date','date',''],['value','text','0,00']]:[['description','text','Serviço ou produto'],['value','text','0,00']];
+  cols.forEach(([key,type,placeholder])=>{const td=document.createElement('td');const input=document.createElement('input');input.type=type;input.dataset.col=key;input.placeholder=placeholder;input.value=values[key]||'';if(key==='value'){input.inputMode='decimal';input.addEventListener('input',updateBudgetTotal)}td.appendChild(input);tr.appendChild(td)});
+  const td=document.createElement('td');const del=document.createElement('button');del.type='button';del.className='sheet-remove';del.textContent='×';del.title='Remover linha';del.addEventListener('click',()=>{tr.remove();if(tableId==='budgetSheet')updateBudgetTotal()});td.appendChild(del);tr.appendChild(td);tbody.appendChild(tr);
+}
+function sheetRows(tableId){return [...$(tableId).querySelectorAll('tbody tr')].map(tr=>Object.fromEntries([...tr.querySelectorAll('input[data-col]')].map(i=>[i.dataset.col,i.value.trim()]))).filter(row=>Object.values(row).some(Boolean))}
+function setSheetRows(tableId, raw, kind){
+  const tbody=$(tableId).querySelector('tbody');tbody.innerHTML='';let rows=[];
+  if(raw){try{const parsed=JSON.parse(raw);if(Array.isArray(parsed))rows=parsed;else if(typeof parsed==='string')rows=[];}catch(e){/* conteúdo antigo de texto livre */}}
+  if(rows.length)rows.forEach(r=>sheetAddRow(tableId,r,kind));else sheetAddRow(tableId,{},kind);
+  if(tableId==='budgetSheet')updateBudgetTotal();
+}
+async function ensureFreshAdminSession(forceRefresh=false){
+  if(!db) return {ok:false,message:"Supabase não está configurado."};
+  // Primeiro deixa o cliente recuperar a sessão persistida e o refresh token.
+  const current=await db.auth.getSession();
+  let session=current.data?.session||null;
+  if(session && (forceRefresh || !session.expires_at || session.expires_at*1000<Date.now()+90_000)){
+    const refreshed=await db.auth.refreshSession();
+    if(!refreshed.error && refreshed.data?.session) session=refreshed.data.session;
+    else if(!session || /refresh token.*(not found|invalid|already used)|token is expired/i.test(refreshed.error?.message||'')) session=null;
+  }
+  if(!session){
+    state.session=null;updateAdminVisibility();
+    return {ok:false,message:"A sessão não pôde ser renovada. Entre novamente como administrador; suas fichas salvas continuam no banco."};
+  }
+  state.session=session;
+  return {ok:true,session};
+}
+async function saveAnamnesisWithRetry(row,id){
+  let result=id?await db.from("da_anamneses").update(row).eq("id",id):await db.from("da_anamneses").insert(row);
+  if(result.error && /jwt expired|invalid jwt|token.*expired/i.test(result.error.message||'')){
+    const auth=await ensureFreshAdminSession(true);
+    if(!auth.ok) return {error:{message:auth.message}};
+    // Reexecuta a operação uma única vez com o access token renovado.
+    result=id?await db.from("da_anamneses").update(row).eq("id",id):await db.from("da_anamneses").insert(row);
+  }
+  return result;
+}
+function syncSheetsToFields(){ $('aPrescription').value=JSON.stringify(sheetRows('procedureSheet'));$('aBudget').value=JSON.stringify(sheetRows('budgetSheet')); }
+function updateBudgetTotal(){
+  const total=sheetRows('budgetSheet').reduce((sum,row)=>{let v=(row.value||'').replace(/R\$\s?/gi,'').replace(/\./g,'').replace(',','.').replace(/[^0-9.-]/g,'');const n=Number(v);return sum+(Number.isFinite(n)?n:0)},0);
+  $('budgetTotal').textContent=total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+}
+$('addProcedureRow').addEventListener('click',()=>sheetAddRow('procedureSheet',{},'procedure'));
+$('addBudgetRow').addEventListener('click',()=>sheetAddRow('budgetSheet',{},'budget'));
+sheetAddRow('procedureSheet',{},'procedure');sheetAddRow('budgetSheet',{},'budget');
+
+$("anamnesisForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!db)return setMessage("anamnesisMessage","Supabase não está configurado.",true);
+  const authCheck=await ensureFreshAdminSession();
+  if(!authCheck.ok)return setMessage("anamnesisMessage",authCheck.message,true);
+  syncSheetsToFields();
+  const row={};
+  anamnesisFields.forEach(([key,id])=>{
+    const el=$(id);
+    if(id==='aHairHabit') row[key]=el.dataset.multipleValue||el.value||null;
+    else row[key]=el.type==="checkbox"?el.checked:(el.value||null);
+  });
+  // Salva a assinatura no campo de texto já existente, sem exigir nova coluna no Supabase.
+  // O texto original do termo e a data continuam preservados separadamente.
+  row.responsibility_notes=JSON.stringify({
+    version:1,
+    text:$('aResponsibility').value||'',
+    professional_signature:$('aProfessionalSignature').value||'',
+    client_name:$('aResponsibilityName').value||'',
+    client_rg:$('aResponsibilityRG').value||'',
+    client_cpf:$('aResponsibilityCPF').value||'',
+    city:$('aResponsibilityCity').value||'Porto Velho - RO',
+    responsibility_date:$('aResponsibilityDate').value||''
+  });
+  // Guarda tratamento e seleções do cronograma na coluna já existente cycle_treatments.
+  row.cycle_treatments=JSON.stringify({
+    version:2,
+    cycles:[1,2,3,4,5].map(n=>[1,2,3,4].map(j=>$("aCycleTreatment"+n+"_"+j)).filter(el=>el&&el.checked).map(el=>el.value))
+  });
+  row.birth_date=row.birth_date||null;
+  const id=$("anamnesisId").value;
+  const result=await saveAnamnesisWithRetry(row,id);
+  if(result.error){
+    const expired=/jwt expired|invalid jwt|token.*expired/i.test(result.error.message||"");
+    return setMessage("anamnesisMessage",expired?"Sua sessão expirou. Entre novamente como administrador e tente salvar.":"Erro ao salvar: "+result.error.message,true);
+  }
+  $("anamnesisForm").reset(); const habit=$('aHairHabit'); if(habit)habit.dataset.multipleValue=''; syncAnamnesisChoices();setSheetRows('procedureSheet','[]','procedure');setSheetRows('budgetSheet','[]','budget');$("anamnesisId").value="";
+  await loadAnamneses();setMessage("anamnesisMessage","Ficha salva com sucesso.");
+});
+$("clearAnamnesis").addEventListener("click",()=>{$("anamnesisForm").reset(); const habit=$('aHairHabit'); if(habit)habit.dataset.multipleValue=''; syncAnamnesisChoices();setSheetRows('procedureSheet','[]','procedure');setSheetRows('budgetSheet','[]','budget');$("anamnesisId").value=""});
+async function loadAnamneses(){
+  if(!db||!state.session)return;
+  const {data,error}=await db.from("da_anamneses").select("id,name,contact,birth_date,created_at").order("created_at",{ascending:false});
+  const host=$("anamnesisList");
+  if(error){host.innerHTML=`<div class="empty">Erro ao carregar fichas: ${escapeHTML(error.message)}. Confira a tabela da anamnese.</div>`;return}
+  state.anamneses=data||[];
+  renderAnamnesisLists();
+}
+function renderAnamnesisLists(){
+  const data=state.anamneses||[];
+  const host=$("anamnesisList");
+  if(host){
+    if(!data.length)host.innerHTML='<div class="empty">Nenhuma ficha salva ainda.</div>';
+    else host.innerHTML=`<div class="cards">${data.map(a=>`<article class="item-card"><h4>${escapeHTML(a.name)}</h4><p>${escapeHTML(a.contact||"Sem contato")} · ${escapeHTML(a.birth_date||"Nascimento não informado")}</p><div class="item-actions"><button class="btn btn-small" data-open-anamnesis="${a.id}">Carregar ficha</button><button class="btn btn-danger btn-small" data-remove-anamnesis="${a.id}">Excluir</button></div></article>`).join("")}</div>`;
+    host.querySelectorAll("[data-open-anamnesis]").forEach(b=>b.addEventListener("click",()=>openAnamnesis(b.dataset.openAnamnesis)));
+    host.querySelectorAll("[data-remove-anamnesis]").forEach(b=>b.addEventListener("click",()=>removeAnamnesis(b.dataset.removeAnamnesis)));
+  }
+  renderSavedAnamnesisList();
+}
+function renderSavedAnamnesisList(){
+  const host=$("savedAnamnesisList");
+  if(!host)return;
+  const term=($("savedAnamnesisSearch")?.value||"").trim().toLowerCase();
+  const filtered=(state.anamneses||[]).filter(a=>(a.name||"").toLowerCase().includes(term)||(a.contact||"").toLowerCase().includes(term));
+  if(!filtered.length){host.innerHTML='<div class="empty">Nenhuma ficha encontrada.</div>';return;}
+  host.innerHTML=`<div class="cards">${filtered.map(a=>`<article class="item-card"><h4>${escapeHTML(a.name||"Sem nome")}</h4><p>${escapeHTML(a.contact||"Sem contato")}<br>Data de nascimento: ${escapeHTML(a.birth_date||"Não informada")}</p><div class="item-actions"><button class="btn btn-primary btn-small" data-open-saved="${a.id}" type="button">Abrir ficha</button></div></article>`).join("")}</div>`;
+  host.querySelectorAll("[data-open-saved]").forEach(b=>b.addEventListener("click",()=>{showAdminTab("anamnesis");openAnamnesis(b.dataset.openSaved)}));
+}
+$("savedAnamnesisSearch").addEventListener("input",renderSavedAnamnesisList);
+$("refreshSavedAnamneses").addEventListener("click",loadAnamneses);
+async function openAnamnesis(id){
+  const {data,error}=await db.from("da_anamneses").select("*").eq("id",id).single();
+  if(error)return alert("Não foi possível abrir a ficha: "+error.message);
+  anamnesisFields.forEach(([key,field])=>{
+    const el=$(field);
+    if(field==='aHairHabit') { el.dataset.multipleValue=data[key]??''; el.value=(data[key]||'').split(' | ')[0]||''; }
+    else if(el.type==="checkbox")el.checked=(data[key]===true||data[key]==="Sim"||data[key]==="true");
+    else el.value=data[key]??"";
+  });
+  // Compatibilidade com registros antigos que guardavam o termo como texto puro.
+  if(data.responsibility_notes){
+    try{
+      const savedTerm=JSON.parse(data.responsibility_notes);
+      if(savedTerm && savedTerm.version===1){
+        $('aResponsibility').value=savedTerm.text||'';
+        $('aProfessionalSignature').value=savedTerm.professional_signature||'';
+        $('aResponsibilityName').value=savedTerm.client_name||'';
+        $('aResponsibilityRG').value=savedTerm.client_rg||'';
+        $('aResponsibilityCPF').value=savedTerm.client_cpf||'';
+        $('aResponsibilityCity').value=savedTerm.city||'Porto Velho - RO';
+        $('aResponsibilityDate').value=savedTerm.responsibility_date||'';
+      }
+    }catch(e){ $('aResponsibility').value=data.responsibility_notes; }
+  }
+  syncAnamnesisChoices();
+  setSheetRows('procedureSheet',data.prescription||'','procedure');
+  setSheetRows('budgetSheet',data.budget_details||'','budget');
+  // Compatibilidade com fichas antigas: se cycle_treatments era texto livre, não quebra a abertura.
+  const savedCycles=data.cycle_treatments;
+  if(savedCycles){
+    try{
+      const parsed=JSON.parse(savedCycles);
+      if(parsed&&(parsed.version===1||parsed.version===2)){
+        (parsed.cycles||[]).forEach((values,index)=>{
+          const selected=Array.isArray(values)?values:(values?[values]:[]);
+          [1,2,3,4].forEach(j=>{const el=$("aCycleTreatment"+(index+1)+"_"+j);if(el)el.checked=selected.includes(el.value);});
+        });
+      }
+    }catch(e){ /* Ficha antiga com texto livre: mantém os outros campos normalmente. */ }
+  }
+  $("anamnesisId").value=data.id;$("anamnesisForm").scrollIntoView({behavior:"smooth"});
+}
+async function removeAnamnesis(id){
+  if(!confirm("Excluir permanentemente esta ficha?"))return;
+  const {error}=await db.from("da_anamneses").delete().eq("id",id);
+  if(error)return alert("Erro ao excluir: "+error.message);
+  await loadAnamneses();
+}
+
+/* INICIALIZAÇÃO E RECUPERAÇÃO DA SESSÃO */
+async function init(){
+  routeFromHash();
+  if(!db){
+    $("bookingNotice").textContent="O visual está pronto, mas ainda falta configurar a URL e a chave pública do Supabase.";
+    renderPublicServices();return;
+  }
+  const {data:{session},error}=await db.auth.getSession();
+  if(error)console.error(error);
+  state.session=session;updateAdminVisibility();
+  await loadServices();
+  if(session&&location.hash==="#admin")showTab("admin");
+  db.auth.onAuthStateChange((_event,session)=>{
+    state.session=session;updateAdminVisibility();
+    if(session)loadServices();
+  });
+  // Reativa a renovação quando a aba volta ao primeiro plano, comum em uso diário.
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="visible") db.auth.startAutoRefresh();
+    else db.auth.stopAutoRefresh();
+  });
+}
+init();
+enhanceAnamnesisSelects();
+</script>
+</body>
+</html>
