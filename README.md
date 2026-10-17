@@ -1,4 +1,4 @@
-[DayAgenda_calendario_agendamentos.html](https://github.com/user-attachments/files/33606552/DayAgenda_calendario_agendamentos.html)
+
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="light">
 <head>
