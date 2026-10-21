@@ -227,6 +227,9 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
         <div id="anamnesisAdmin" class="hidden">
           <h3>Ficha de anamnese capilar</h3>
           <div class="notice">As informações de saúde são sensíveis. Use somente com autorização da cliente e mantenha o acesso restrito à profissional responsável.</div>
+          <div style="margin:0 0 14px">
+            <button class="btn" id="editAnamnesisMode" type="button" style="background:#000;color:#fff;border:1px solid #000;padding:9px 16px">Editar</button>
+          </div>
           <form id="anamnesisForm">
             <input type="hidden" id="anamnesisId">
             <div class="section-label">Dados pessoais</div>
@@ -533,6 +536,19 @@ let calendarCursor = new Date(); calendarCursor = new Date(calendarCursor.getFul
 let selectedAppointmentDate = "";
 const monthFormatter = new Intl.DateTimeFormat("pt-BR",{month:"long",year:"numeric"});
 function localDateKey(year,month,day){return `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`}
+// Usa a data de nascimento salva na própria ficha da cliente (da_anamneses.birth_date).
+function getBirthMonthDay(birthDate){
+  if(!birthDate)return null;
+  const value=String(birthDate).trim();
+  const iso=value.match(/^\d{4}-(\d{2})-(\d{2})/);
+  if(iso)return {month:Number(iso[1]),day:Number(iso[2])};
+  const br=value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if(br)return {month:Number(br[2]),day:Number(br[1])};
+  return null;
+}
+function getBirthdaysForMonthDay(month,day){
+  return (state.anamneses||[]).filter(a=>{const d=getBirthMonthDay(a.birth_date);return d&&d.month===month&&d.day===day;});
+}
 function renderAppointmentsCalendar(){
   const grid=$("appointmentsCalendar"); if(!grid)return;
   const y=calendarCursor.getFullYear(),m=calendarCursor.getMonth();
@@ -545,13 +561,17 @@ function renderAppointmentsCalendar(){
   for(let day=1;day<=days;day++){
     const key=localDateKey(y,m,day);
     const count=state.appointments.filter(a=>a.appointment_date===key&&a.status!=="cancelado").length;
+    const birthdays=getBirthdaysForMonthDay(m+1,day);
     const classes=["calendar-day",key===selectedAppointmentDate?"selected":"",key===todayKey?"today":""].filter(Boolean).join(" ");
-    html+=`<button type="button" class="${classes}" data-calendar-date="${key}"><span>${day}</span>${count?`<span class="calendar-count">${count} horário${count===1?"":"s"}</span>`:""}</button>`;
+    html+=`<button type="button" class="${classes}" data-calendar-date="${key}"><span>${day}</span>${count?`<span class="calendar-count">${count} horário${count===1?"":"s"}</span>`:""}${birthdays.length?`<span class="calendar-count" title="${birthdays.map(a=>escapeHTML(a.name||"Cliente")).join(", ")}">🎂 ${birthdays.length} aniversário${birthdays.length===1?"":"s"}</span>`:""}</button>`;
   }
   grid.innerHTML=html;
   grid.querySelectorAll("[data-calendar-date]").forEach(btn=>btn.addEventListener("click",()=>{selectedAppointmentDate=btn.dataset.calendarDate;renderAppointmentsCalendar();renderAppointmentsList()}));
   const total=state.appointments.filter(a=>a.appointment_date===selectedAppointmentDate&&a.status!=="cancelado").length;
-  $("calendarSummary").textContent=selectedAppointmentDate?`${selectedAppointmentDate.split("-").reverse().join("/")} · ${total} agendamento${total===1?"":"s"} (sem cancelados)`:"Selecione um dia para filtrar a lista. Os números verdes indicam horários agendados.";
+  const selectedParts=selectedAppointmentDate.split("-");
+  const birthdays=selectedAppointmentDate?getBirthdaysForMonthDay(Number(selectedParts[1]),Number(selectedParts[2])):[];
+  const birthdayText=birthdays.length?` · 🎂 ${birthdays.map(a=>a.name||"Cliente").join(", ")}`:"";
+  $("calendarSummary").textContent=selectedAppointmentDate?`${selectedAppointmentDate.split("-").reverse().join("/")} · ${total} agendamento${total===1?"":"s"}${birthdayText}`:"Selecione um dia. 🎂 marca os aniversários das clientes.";
 }
 function renderAppointmentsList(){
   const all=state.appointments||[];
@@ -675,6 +695,30 @@ $('addProcedureRow').addEventListener('click',()=>sheetAddRow('procedureSheet',{
 $('addBudgetRow').addEventListener('click',()=>sheetAddRow('budgetSheet',{},'budget'));
 sheetAddRow('procedureSheet',{},'procedure');sheetAddRow('budgetSheet',{},'budget');
 
+// A ficha abre em visualização; a profissional ativa a edição quando quiser alterar dados.
+let anamnesisEditing = false;
+function setAnamnesisMode(editing){
+  anamnesisEditing = !!editing;
+  const form = $("anamnesisForm");
+  form.querySelectorAll("input, textarea, select, button").forEach(el=>{
+    if(el.id === "anamnesisId") return;
+    if(el.id === "editAnamnesisMode") return;
+    el.disabled = !anamnesisEditing;
+  });
+  // Botões de opções customizadas também ficam bloqueados durante a visualização.
+  form.querySelectorAll(".choice-pill, .cycle-option").forEach(el=>{
+    el.style.pointerEvents = anamnesisEditing ? "" : "none";
+    el.style.opacity = anamnesisEditing ? "" : ".82";
+  });
+  const modeButton = $("editAnamnesisMode");
+  modeButton.textContent = anamnesisEditing ? "Visualizar" : "Editar";
+  modeButton.style.background = anamnesisEditing ? "#fff" : "#000";
+  modeButton.style.color = anamnesisEditing ? "#000" : "#fff";
+  modeButton.style.borderColor = anamnesisEditing ? "#000" : "#000";
+  form.classList.toggle("anamnesis-readonly", !anamnesisEditing);
+}
+$("editAnamnesisMode").addEventListener("click",()=>setAnamnesisMode(!anamnesisEditing));
+
 $("anamnesisForm").addEventListener("submit",async e=>{
   e.preventDefault();
   if(!db)return setMessage("anamnesisMessage","Supabase não está configurado.",true);
@@ -712,9 +756,9 @@ $("anamnesisForm").addEventListener("submit",async e=>{
     return setMessage("anamnesisMessage",expired?"Sua sessão expirou. Entre novamente como administrador e tente salvar.":"Erro ao salvar: "+result.error.message,true);
   }
   $("anamnesisForm").reset(); const habit=$('aHairHabit'); if(habit)habit.dataset.multipleValue=''; syncAnamnesisChoices();setSheetRows('procedureSheet','[]','procedure');setSheetRows('budgetSheet','[]','budget');$("anamnesisId").value="";
-  await loadAnamneses();setMessage("anamnesisMessage","Ficha salva com sucesso.");
+  await loadAnamneses();setAnamnesisMode(false);setMessage("anamnesisMessage","Ficha salva com sucesso.");
 });
-$("clearAnamnesis").addEventListener("click",()=>{$("anamnesisForm").reset(); const habit=$('aHairHabit'); if(habit)habit.dataset.multipleValue=''; syncAnamnesisChoices();setSheetRows('procedureSheet','[]','procedure');setSheetRows('budgetSheet','[]','budget');$("anamnesisId").value=""});
+$("clearAnamnesis").addEventListener("click",()=>{$("anamnesisForm").reset(); const habit=$('aHairHabit'); if(habit)habit.dataset.multipleValue=''; syncAnamnesisChoices();setSheetRows('procedureSheet','[]','procedure');setSheetRows('budgetSheet','[]','budget');$("anamnesisId").value="";setAnamnesisMode(true)});
 async function loadAnamneses(){
   if(!db||!state.session)return;
   const {data,error}=await db.from("da_anamneses").select("id,name,contact,birth_date,created_at").order("created_at",{ascending:false});
@@ -722,6 +766,7 @@ async function loadAnamneses(){
   if(error){host.innerHTML=`<div class="empty">Erro ao carregar fichas: ${escapeHTML(error.message)}. Confira a tabela da anamnese.</div>`;return}
   state.anamneses=data||[];
   renderAnamnesisLists();
+  renderAppointmentsCalendar();
 }
 function renderAnamnesisLists(){
   const data=state.anamneses||[];
@@ -785,7 +830,7 @@ async function openAnamnesis(id){
       }
     }catch(e){ /* Ficha antiga com texto livre: mantém os outros campos normalmente. */ }
   }
-  $("anamnesisId").value=data.id;$("anamnesisForm").scrollIntoView({behavior:"smooth"});
+  $("anamnesisId").value=data.id;setAnamnesisMode(false);$("anamnesisForm").scrollIntoView({behavior:"smooth"});
 }
 async function removeAnamnesis(id){
   if(!confirm("Excluir permanentemente esta ficha?"))return;
@@ -795,6 +840,7 @@ async function removeAnamnesis(id){
 }
 
 /* INICIALIZAÇÃO E RECUPERAÇÃO DA SESSÃO */
+setAnamnesisMode(false);
 async function init(){
   routeFromHash();
   if(!db){
