@@ -180,12 +180,12 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
           <button class="tab active" data-admin-tab="services" type="button">Procedimentos</button>
           <button class="tab" data-admin-tab="appointments" type="button">Agendamentos</button>
           <button class="tab" data-admin-tab="anamnesis" type="button">Ficha de anamnese</button>
-          <button class="tab" data-admin-tab="saved" type="button">Fichas salvas</button>
+          <button class="tab" data-admin-tab="saved" type="button">Fichas salvas (<span id="savedAnamnesisTabCount">0</span>)</button>
         </div>
 
         <div id="savedAdmin" class="hidden">
           <div class="panel-head">
-            <div><h3>Fichas salvas</h3><p>Encontre uma cliente e abra a ficha sem rolar até o final do formulário.</p></div>
+            <div><h3>Fichas salvas: <span id="savedAnamnesisCount" style="display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:2px 8px;border-radius:999px;background:#111;color:#fff;font-size:14px">0</span></h3><p>Encontre uma cliente e abra a ficha sem rolar até o final do formulário.</p></div>
             <button class="btn" id="refreshSavedAnamneses" type="button">Atualizar lista</button>
           </div>
           <div class="field" style="margin-bottom:14px"><label for="savedAnamnesisSearch">Buscar por nome ou contato</label><input id="savedAnamnesisSearch" type="search" placeholder="Digite o nome ou telefone da cliente"></div>
@@ -338,7 +338,7 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
             <div class="form-actions"><button class="btn btn-primary" type="submit">Salvar ficha</button><button class="btn" id="clearAnamnesis" type="button">Limpar ficha</button></div>
             <p id="anamnesisMessage" class="inline-note"></p>
           </form>
-          <div class="section-label">Fichas salvas</div>
+          <div class="section-label">Fichas salvas: <span id="anamnesisCount">0</span></div>
           <div id="anamnesisList"><div class="empty">Nenhuma ficha carregada.</div></div>
         </div>
       </div>
@@ -348,7 +348,7 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
 <footer>DayAgenda · Seu tempo, seu agendamento.</footer>
 
 <script>
-/* COLOQUE AQUI A URL E A CHAVE PÚBLICA DO SUPABASE */
+/* Supabase: URL do projeto e chave pública (publishable/anon). Nunca use service_role no navegador. */
 const SUPABASE_URL = "https://tfvnuqchjpjglidmhxpr.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_IG3rrWpeoOcBYnyMCFCO4Q_5UwdvMBj";
 
@@ -398,7 +398,7 @@ function showAdminTab(tab){
   $("anamnesisAdmin").classList.toggle("hidden",tab!=="anamnesis");
   $("savedAdmin").classList.toggle("hidden",tab!=="saved");
   document.querySelectorAll("[data-admin-tab]").forEach(b=>b.classList.toggle("active",b.dataset.adminTab===tab));
-  if(state.session&&tab==="appointments")loadAppointments();
+  if(state.session&&tab==="appointments"){loadAppointments();loadAnamneses();}
   if(state.session&&(tab==="anamnesis"||tab==="saved"))loadAnamneses();
 }
 document.querySelectorAll("[data-admin-tab]").forEach(b=>b.addEventListener("click",()=>showAdminTab(b.dataset.adminTab)));
@@ -442,7 +442,7 @@ function renderPublicServices(){
 async function loadServices(){
   if(!db)return;
   const {data,error}=await db.from("da_services").select("*").order("name");
-  if(error){$("bookingNotice").textContent="Erro ao carregar procedimentos: "+error.message;return}
+  if(error){$("bookingNotice").textContent="Supabase conectado, mas não foi possível carregar os procedimentos. Verifique se a tabela da_services existe e se as políticas RLS permitem leitura pública: "+error.message;return}
   state.services=data||[];renderPublicServices();renderServicesAdmin();
 }
 function renderServicesAdmin(){
@@ -510,7 +510,7 @@ $("bookingForm").addEventListener("submit",async e=>{
     notes:$("bookingNotes").value.trim()||null,status:"pendente"
   };
   const {error}=await db.from("da_appointments").insert(row);
-  if(error)return alert("Erro ao solicitar agendamento: "+error.message);
+  if(error)return alert("Não foi possível enviar o agendamento. Confira se a tabela da_appointments existe e se a política RLS permite INSERT público. Detalhe: "+error.message);
   alert("Solicitação enviada! Aguarde a confirmação do salão.");
   $("bookingForm").reset();$("bookingDate").min=localDateISO();refreshTimeOptions();
 });
@@ -592,7 +592,7 @@ function renderAppointmentsList(){
 async function loadAppointments(){
   if(!db||!state.session)return;
   const {data,error}=await db.from("da_appointments").select("*").order("appointment_date").order("appointment_time");
-  if(error){$("appointmentsList").innerHTML=`<div class="empty">Erro: ${escapeHTML(error.message)}</div>`;return}
+  if(error){$("appointmentsList").innerHTML=`<div class="empty">Erro ao carregar agendamentos. Confira a tabela da_appointments e as permissões do administrador: ${escapeHTML(error.message)}</div>`;return}
   state.appointments=data||[];refreshTimeOptions();renderAppointmentsCalendar();renderAppointmentsList();
 }
 $("calendarPrev").addEventListener("click",()=>{calendarCursor=new Date(calendarCursor.getFullYear(),calendarCursor.getMonth()-1,1);renderAppointmentsCalendar()});
@@ -770,6 +770,8 @@ async function loadAnamneses(){
 }
 function renderAnamnesisLists(){
   const data=state.anamneses||[];
+  const total=data.length;
+  ["savedAnamnesisCount","savedAnamnesisTabCount","anamnesisCount"].forEach(id=>{const el=$(id);if(el)el.textContent=total;});
   const host=$("anamnesisList");
   if(host){
     if(!data.length)host.innerHTML='<div class="empty">Nenhuma ficha salva ainda.</div>';
