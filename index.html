@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DayAgenda — Salão de beleza</title>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>window.OneSignalDeferred = window.OneSignalDeferred || [];</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
@@ -174,6 +176,10 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
     </div>
 
     <div id="adminDashboard" class="hidden">
+      <div class="panel">
+        <div class="panel-head"><div><h3>Notificações</h3><p>Ative os avisos neste navegador para receber notificações do DayAgenda.</p></div><button class="btn btn-primary" id="enablePushBtn" type="button">Ativar notificações</button></div>
+        <p id="pushStatus" class="inline-note" aria-live="polite">As notificações ainda não foram ativadas neste navegador.</p>
+      </div>
       <div class="panel">
         <div class="panel-head"><div><h3>Painel do salão</h3><p>Gerencie procedimentos, agendamentos e fichas.</p></div><button class="btn" id="logoutBtn" type="button">Sair</button></div>
         <div class="tabs">
@@ -866,6 +872,55 @@ async function init(){
 }
 init();
 enhanceAnamnesisSelects();
+
+/* ONESIGNAL: notificações Web Push do DayAgenda */
+let dayAgendaOneSignalReady = false;
+let dayAgendaOneSignal = null;
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+window.OneSignalDeferred.push(async function(OneSignal) {
+  dayAgendaOneSignal = OneSignal;
+  try {
+    await OneSignal.init({
+      appId: "acac83c7-e358-4b2f-86c6-eac41459f847",
+      serviceWorkerPath: "agendaday/OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/agendaday/" }
+    });
+    dayAgendaOneSignalReady = true;
+    const status = document.getElementById("pushStatus");
+    if (status && OneSignal.Notifications.permission) status.textContent = "Notificações já estão permitidas neste navegador.";
+  } catch (error) {
+    console.error("Erro ao iniciar OneSignal:", error);
+    const status = document.getElementById("pushStatus");
+    if (status) status.textContent = "Não foi possível iniciar as notificações. Confira a configuração do site no OneSignal.";
+  }
+});
+
+document.getElementById("enablePushBtn")?.addEventListener("click", async () => {
+  const status = document.getElementById("pushStatus");
+  const btn = document.getElementById("enablePushBtn");
+  if (!state.session || location.hash !== "#admin") {
+    if (status) status.textContent = "Entre na área administrativa para ativar as notificações.";
+    return;
+  }
+  if (!dayAgendaOneSignalReady || !dayAgendaOneSignal) {
+    if (status) status.textContent = "O serviço de notificações ainda está carregando. Tente novamente em alguns segundos.";
+    return;
+  }
+  try {
+    if (status) status.textContent = "Aguardando permissão do navegador…";
+    await dayAgendaOneSignal.Notifications.requestPermission();
+    if (dayAgendaOneSignal.Notifications.permission) {
+      await dayAgendaOneSignal.User.addTag("dayagenda_admin", "true");
+      if (status) status.textContent = "Notificações ativadas neste navegador.";
+      if (btn) btn.textContent = "Notificações ativadas";
+    } else if (status) {
+      status.textContent = "Permissão não concedida. Libere notificações nas configurações do navegador e tente novamente.";
+    }
+  } catch (error) {
+    console.error("Erro ao pedir permissão do OneSignal:", error);
+    if (status) status.textContent = "Não deu para ativar. Verifique se o site e o service worker estão configurados no OneSignal.";
+  }
+});
 </script>
 </body>
 </html>
