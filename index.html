@@ -65,10 +65,11 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft)}
 .policy-banner-inner{padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;color:var(--text);line-height:1.55}
 .policy-banner-title{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;font-weight:800;letter-spacing:.2px}
 .policy-banner-title .policy-icon{font-size:16px}
-.scroll-cue{display:flex;align-items:center;justify-content:center;gap:10px;margin:12px auto 0;padding:10px 16px;width:fit-content;max-width:calc(100% - 24px);border:1px solid var(--border);border-radius:999px;background:var(--surface2);color:var(--text);font-size:13px;font-weight:700;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.scroll-cue{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;justify-content:center;gap:10px;margin:0;padding:10px 14px;width:max-content;max-width:calc(100% - 20px);border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text);font-size:13px;font-weight:700;text-align:center;box-shadow:0 5px 18px rgba(0,0,0,.18);transition:opacity .18s}
 .scroll-cue .scroll-arrow{display:inline-grid;place-items:center;width:27px;height:27px;border:1px solid var(--border);border-radius:50%;font-size:20px;line-height:1;flex-shrink:0}
 .scroll-cue:hover{border-color:var(--accent)}
-@media(max-width:500px){.scroll-cue{font-size:11px;padding:8px 10px;gap:7px;margin-top:9px}}
+.scroll-cue.hidden-cue{opacity:0;pointer-events:none}
+@media(max-width:500px){.scroll-cue{bottom:8px;font-size:11px;padding:8px 10px;gap:7px}}
 
 .policy-banner-inner p{margin:6px 0;font-size:14px}
 .policy-banner-inner strong{font-weight:800}
@@ -94,8 +95,12 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
  .grid.three,.check-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:500px){
- .container{padding:15px 10px}
- .panel,.hero-copy,.hero-side{padding:17px}
+ .container{padding:12px 10px}
+ .panel,.hero-copy,.hero-side{padding:13px}
+ .hero-copy h2{margin:10px 0 8px;font-size:clamp(27px,7vw,34px);line-height:1.12}
+ .hero-copy p,.hero-side p{line-height:1.45;margin:8px 0}
+ .hero-actions{margin-top:10px;gap:7px}
+ .hero-actions .btn{padding:9px 11px}
  .grid,.grid.three,.check-grid,.cards{grid-template-columns:1fr}
  .panel-head{flex-direction:column}
 }
@@ -147,12 +152,6 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
     <p>O não comparecimento ou cancelamento sem justificativa poderá gerar uma taxa de <strong>R$ 50,00</strong>.</p>
   </div>
 </section>
-
-<button class="scroll-cue" id="scrollCue" type="button" aria-label="Descer até os procedimentos e formulário de agendamento">
-  <span class="scroll-arrow" aria-hidden="true">↓</span>
-  Role para conhecer os procedimentos e agendar seu horário
-</button>
-
 <main class="container">
   <section class="hero">
     <div class="hero-copy">
@@ -171,6 +170,12 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
       <p>Conheça nossos procedimentos, tire suas dúvidas e consulte a disponibilidade de horários. Estamos aqui para ajudar você a escolher o melhor atendimento!</p>
     </div>
   </section>
+
+  <button class="scroll-cue" id="scrollCue" type="button" aria-label="Descer até os procedimentos e formulário de agendamento">
+    <span class="scroll-arrow" aria-hidden="true">↓</span>
+    Role para ver os procedimentos e agendar
+  </button>
+
 <section id="bookingView">
     <div class="panel" id="bookingPanel">
       <div class="panel-head">
