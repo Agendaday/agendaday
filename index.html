@@ -40,6 +40,9 @@ header{position:sticky;top:0;background:var(--surface);border-bottom:1px solid v
 .btn{padding:11px 15px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:bold}
 .btn-primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
 .btn-danger{color:var(--danger)}
+.hero-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+.btn-whatsapp{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;background:#25D366;color:#fff;border-color:#25D366}
+.btn-whatsapp:hover{filter:brightness(.95)}
 .btn-small{padding:7px 10px;font-size:12px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .tab{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:10px 14px;border-radius:10px;font-weight:bold}
@@ -129,7 +132,10 @@ footer{text-align:center;color:var(--muted);padding:20px;font-size:12px}
       <span class="status">BELEZA COM ORGANIZAÇÃO</span>
       <h2>Seu próximo momento de cuidado começa aqui.</h2>
       <p>Agende seu horário de forma simples. Escolha um procedimento disponível, informe seus dados e pronto. Não precisa criar conta.</p>
-      <button class="btn btn-primary" id="bookJump" type="button">Agendar horário →</button>
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="bookJump" type="button">Agendar horário →</button>
+        <a class="btn btn-whatsapp" href="https://wa.me/5569993250186?text=Ol%C3%A1%21%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es%20sobre%20os%20procedimentos." target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>
+      </div>
     </div>
     <div class="hero-side">
       <div class="hero-icon">✿</div>
