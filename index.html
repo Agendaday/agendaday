@@ -69,6 +69,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft)}
 .scroll-cue .scroll-arrow{display:inline-grid;place-items:center;width:27px;height:27px;border:1px solid var(--border);border-radius:50%;font-size:20px;line-height:1;flex-shrink:0}
 .scroll-cue:hover{border-color:var(--accent)}
 .scroll-cue.hidden-cue{opacity:0;pointer-events:none}
+/* Espaço de segurança para que o botão flutuante não corte controles no final da página. */
+main.container{padding-bottom:84px}
+@media(max-width:500px){main.container{padding-bottom:76px}}
 @media(max-width:500px){.scroll-cue{bottom:8px;font-size:11px;padding:8px 10px;gap:7px}}
 
 .policy-banner-inner p{margin:6px 0;font-size:14px}
@@ -427,14 +430,30 @@ function showTab(tab){
   $("bookingView").classList.toggle("hidden",tab!=="booking");
   $("adminView").classList.toggle("hidden",tab!=="admin");
   if(tab==="admin")updateAdminVisibility();
+  if(typeof updateScrollCueForCurrentView==="function")updateScrollCueForCurrentView();
 }
 function routeFromHash(){
   showTab(location.hash==="#admin"?"admin":"booking");
 }
 window.addEventListener("hashchange",routeFromHash);
+function updateScrollCueForCurrentView(){
+  const cue = $("scrollCue");
+  const isAdmin = !$("adminView").classList.contains("hidden");
+  const isLoggedIn = !!state.session;
+  if(isAdmin){
+    cue.innerHTML = '<span class="scroll-arrow" aria-hidden="true">↓</span> Role para ver o painel do salão';
+    cue.setAttribute("aria-label","Descer para ver o painel do salão");
+  }else{
+    cue.innerHTML = '<span class="scroll-arrow" aria-hidden="true">↓</span> Role para ver os procedimentos e agendar';
+    cue.setAttribute("aria-label","Descer para ver os procedimentos e agendar");
+  }
+}
 $("scrollCue").addEventListener("click",()=>{
-  $("bookingPanel").scrollIntoView({behavior:"smooth",block:"start"});
+  const isAdmin = !$("adminView").classList.contains("hidden");
+  const target = isAdmin ? (state.session ? $("adminDashboard") : $("loginPanel")) : $("bookingPanel");
+  if(target) target.scrollIntoView({behavior:"smooth",block:"start"});
 });
+updateScrollCueForCurrentView();
 $("bookJump").addEventListener("click",()=>{
   showTab("booking");$("bookingPanel").scrollIntoView({behavior:"smooth"});
 });
@@ -452,6 +471,7 @@ document.querySelectorAll("[data-admin-tab]").forEach(b=>b.addEventListener("cli
 function updateAdminVisibility(){
   $("loginPanel").classList.toggle("hidden",!!state.session);
   $("adminDashboard").classList.toggle("hidden",!state.session);
+  if(typeof updateScrollCueForCurrentView==="function")updateScrollCueForCurrentView();
 }
 function escapeHTML(v){
   return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
