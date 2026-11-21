@@ -576,9 +576,26 @@ $("bookingForm").addEventListener("submit",async e=>{
     appointment_date:$("bookingDate").value,appointment_time:$("bookingTime").value,
     notes:$("bookingNotes").value.trim()||null,status:"pendente"
   };
-  const {error}=await db.from("da_appointments").insert(row);
+  // Salva o agendamento e recupera o ID para sincronizar com o Google Calendar.
+  const {data:savedAppointment,error}=await db
+    .from("da_appointments")
+    .insert(row)
+    .select("id")
+    .single();
   if(error)return alert("Não foi possível enviar o agendamento. Confira se a tabela da_appointments existe e se a política RLS permite INSERT público. Detalhe: "+error.message);
-  alert("Solicitação enviada! Aguarde a confirmação do salão.");
+
+  // Solicita a sincronização no servidor. A função precisa estar configurada
+  // com autorização segura; nunca coloque chaves privadas do Google neste HTML.
+  const {data:calendarResult,error:calendarError}=await db.functions.invoke(
+    "google-calendar-sync",
+    {body:{appointment_id:savedAppointment.id}}
+  );
+  if(calendarError){
+    console.error("Agendamento salvo, mas a sincronização com o Google Calendar falhou:",calendarError,calendarResult);
+    alert("Solicitação enviada ao salão! A sincronização com o Google Calendar não foi confirmada; a equipe deverá verificar a integração.");
+  }else{
+    alert("Solicitação enviada! Aguarde a confirmação do salão.");
+  }
   $("bookingForm").reset();$("bookingDate").min=localDateISO();refreshTimeOptions();
 });
 
